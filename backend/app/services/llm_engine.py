@@ -7,9 +7,9 @@ from app.schemas import EndpointMetadata, TestCase
 # CONFIGURATION PLACEHOLDERS
 # ==========================================
 # TODO: Replace these values when you are ready to connect to a real LLM.
-LLM_API_KEY = "INSERT_YOUR_API_KEY_HERE"
-LLM_ENDPOINT = "https://api.openai.com/v1/chat/completions" # Example: OpenAI
-LLM_MODEL = "gpt-4-turbo" 
+LLM_API_KEY = "AIzaSyC-eWV0-XEBrOJyV0muDDFrmxhRH30yqT8"
+LLM_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+LLM_MODEL = "gemini-2.5-flash"
 
 def construct_system_prompt() -> str:
     """
@@ -33,58 +33,68 @@ def construct_user_prompt(metadata_list: List[EndpointMetadata]) -> str:
     Feeds the metadata and the required schema to the LLM.
     Reference: Design Doc [cite: 87-98]
     """
-    # Convert Pydantic models to a cleaner dict format for the prompt
     data_summary = [m.dict() for m in metadata_list]
     
     return f"""
-    Here is the API Endpoint Metadata:
-    {json.dumps(data_summary, indent=2)}
+API Endpoints: {json.dumps(data_summary, indent=2)}
 
-    Generate 3-5 test cases for these endpoints.
-    
-    REQUIRED JSON OUTPUT FORMAT (Array of Objects):
-    [
-      {{
-        "id": "string (unique)",
-        "method": "GET | POST | PUT | DELETE",
-        "endpoint": "string (e.g. /users/{{id}})",
-        "description": "string",
-        "headers": {{ "key": "value" }},
-        "pathParams": {{ "key": "value" }},
-        "queryParams": {{ "key": "value" }},
-        "body": {{ "key": "value" }},
-        "expectedStatus": number
-      }}
-    ]
-    """
+Generate exactly 3 test cases. Keep descriptions short.
+
+Return ONLY valid JSON array:
+[
+  {{
+    "id": "test1",
+    "method": "GET",
+    "endpoint": "/users/1",
+    "description": "Get user",
+    "headers": {{}},
+    "pathParams": {{"id": "1"}},
+    "queryParams": {{}},
+    "body": {{}},
+    "expectedStatus": 200
+  }}
+]
+"""
 
 def call_llm_api(system_prompt: str, user_prompt: str) -> str:
     """
-    Sends the request to the LLM provider.
+    Sends the request to the Gemini API.
     """
     if LLM_API_KEY == "INSERT_YOUR_API_KEY_HERE":
         print("WARNING: No API Key provided. Returning empty list.")
         return "[]"
 
     headers = {
-        "Authorization": f"Bearer {LLM_API_KEY}",
         "Content-Type": "application/json"
     }
     
+    # Combine system and user prompts for Gemini
+    combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+    
     payload = {
-        "model": LLM_MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "temperature": 0.2 # Low temperature for deterministic/structured output
+        "contents": [{
+            "parts": [{
+                "text": combined_prompt
+            }]
+        }],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 4096
+        }
     }
 
     try:
-        response = requests.post(LLM_ENDPOINT, headers=headers, json=payload, timeout=30)
+        url = f"{LLM_ENDPOINT}?key={LLM_API_KEY}"
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
         response.raise_for_status()
         data = response.json()
-        return data["choices"][0]["message"]["content"]
+        
+        if "candidates" in data and len(data["candidates"]) > 0:
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+        else:
+            print(f"Unexpected API response format: {data}")
+            return "[]"
+            
     except Exception as e:
         print(f"LLM Call Failed: {e}")
         return "[]"
@@ -111,8 +121,9 @@ def generate_test_cases(metadata_list: List[EndpointMetadata]) -> List[TestCase]
         test_cases = [TestCase(**item) for item in parsed_data]
         return test_cases
         
-    except json.JSONDecodeError:
-        print("Failed to decode LLM response as JSON.")
+    except json.JSONDecodeError as e:
+        print(f"Failed to decode LLM response as JSON: {e}")
+        print(f"Response was: {clean_json[:200]}...")
         return []
     except Exception as e:
         print(f"Validation Error: {e}")

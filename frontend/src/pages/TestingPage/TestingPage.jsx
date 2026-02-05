@@ -49,10 +49,11 @@ const TestingPage = ({ onBack }) => {
       const generated = await genResp.json();
 
       // Set test cases returned from backend (fallback to mock if empty)
+      console.log('Generated test cases:', generated);
       setTestCases(generated.length ? generated : [...INITIAL_TEST_CASES]);
       setResults(null);
     } catch (err) {
-      console.error(err);
+      console.error('Error in file upload/generation:', err);
       // fallback to initial mock tests on error
       setTestCases([...INITIAL_TEST_CASES]);
     } finally {
