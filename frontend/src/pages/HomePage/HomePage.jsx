@@ -15,7 +15,7 @@ const HomePage = ({ setPage }) => (
         onClick={() => setPage('testing')}
         className="px-10 py-4 bg-[#111a29] text-white rounded-full text-lg font-semibold hover:bg-black transition-all shadow-lg"
       >
-        Start Testing
+        Upload file
       </button>
       <button
         onClick={() => setPage('docs')}
