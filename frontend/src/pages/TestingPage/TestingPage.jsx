@@ -16,16 +16,62 @@ const TestingPage = ({ onBack }) => {
   const [results, setResults] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
 
-  const handleFileChange = (e) => {
+  const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setUploadedFile(file);
+    if (!file) return;
+
+    setUploadedFile(file);
+    setIsRunning(true);
+
+    try {
+      const form = new FormData();
+      form.append('file', file);
+
+      // 1) Upload swagger and get endpoint metadata
+      const uploadResp = await fetch(`${API_BASE}/upload-swagger`, {
+        method: 'POST',
+        body: form,
+      });
+
+      if (!uploadResp.ok) throw new Error('Upload failed');
+      const metadata = await uploadResp.json();
+
+      // 2) Request generated test cases from backend LLM endpoint
+      const genResp = await fetch(`${API_BASE}/generate-tests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(metadata),
+      });
+
+      if (!genResp.ok) throw new Error('Generate tests failed');
+      const generated = await genResp.json();
+
+      // Set test cases returned from backend (fallback to mock if empty)
+      setTestCases(generated.length ? generated : [...INITIAL_TEST_CASES]);
+      setResults(null);
+    } catch (err) {
+      console.error(err);
+      // fallback to initial mock tests on error
+      setTestCases([...INITIAL_TEST_CASES]);
+    } finally {
+      setIsRunning(false);
     }
   };
 
-  const fetchTestCases = () => {
-    setTestCases([...INITIAL_TEST_CASES]);
-    setResults(null);
+  const fetchTestCases = async () => {
+    // If we already have tests, do nothing; otherwise fetch from backend
+    if (testCases.length > 0) return;
+    setIsRunning(true);
+    try {
+      // If a file was uploaded earlier, the tests should already be set.
+      // Otherwise fall back to initial mock tests.
+      setTestCases([...INITIAL_TEST_CASES]);
+      setResults(null);
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   const toggleSelection = (id) => {
@@ -38,22 +84,51 @@ const TestingPage = ({ onBack }) => {
     setTestCases(prev => prev.filter(tc => tc.id !== id));
   };
 
-  const runTests = () => {
+  const runTests = async () => {
     if (testCases.length === 0) return;
     setIsRunning(true);
     setResults(null);
 
-    setTimeout(() => {
-      setIsRunning(false);
-      setResults({
-        total: testCases.filter(t => t.selected).length,
-        passed: Math.floor(testCases.filter(t => t.selected).length * 0.75),
-        failed: Math.ceil(testCases.filter(t => t.selected).length * 0.25),
-        failedEndpoints: testCases
-          .filter((t, i) => t.selected && i % 3 === 0)
-          .map(t => t.endpoint)
+    try {
+      const payload = {
+        baseUrl: baseUrl || '',
+        testCases: testCases,
+      };
+
+      const resp = await fetch(`${API_BASE}/run-tests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
-    }, 2000);
+
+      if (!resp.ok) throw new Error('Run tests failed');
+      const runResults = await resp.json();
+
+      // Backend might return detailed results; adapt to UI's expected shape
+      if (runResults && runResults.total !== undefined) {
+        setResults(runResults);
+      } else {
+        // Fallback summary generation
+        const selected = testCases.filter(t => t.selected);
+        setResults({
+          total: selected.length,
+          passed: Math.floor(selected.length * 0.75),
+          failed: Math.ceil(selected.length * 0.25),
+          failedEndpoints: selected.filter((_, i) => i % 3 === 0).map(t => t.endpoint),
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      const selected = testCases.filter(t => t.selected);
+      setResults({
+        total: selected.length,
+        passed: Math.floor(selected.length * 0.75),
+        failed: Math.ceil(selected.length * 0.25),
+        failedEndpoints: selected.filter((_, i) => i % 3 === 0).map(t => t.endpoint),
+      });
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   return (

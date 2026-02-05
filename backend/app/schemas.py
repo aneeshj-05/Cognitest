@@ -16,10 +16,10 @@ class TestCase(BaseModel):
     method: Literal["GET", "POST", "PUT", "PATCH", "DELETE"]
     endpoint: str
     description: str
-    headers: Optional[Dict[str, str]] = {}
-    pathParams: Optional[Dict[str, Any]] = {}
-    queryParams: Optional[Dict[str, Any]] = {}
-    body: Optional[Dict[str, Any]] = {}
+    headers: Optional[Dict[str, str]] = None
+    pathParams: Optional[Dict[str, Any]] = None
+    queryParams: Optional[Dict[str, Any]] = None
+    body: Optional[Dict[str, Any]] = None
     expectedStatus: int
 
 # 3. Execution Result Schema

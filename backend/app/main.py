@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.schemas import EndpointMetadata, TestCase, RunTestsRequest, TestResult
 from app.services.parser import parse_swagger
 from app.services.llm_engine import generate_test_cases
+from app.services import test_runner as runner
+from typing import Any, Dict
 from typing import List
 
 app = FastAPI(title="Cognitest API", version="0.1.0")
@@ -47,7 +49,12 @@ async def generate_tests(metadata: List[EndpointMetadata]):
 
 # Placeholder for Phase 3: Run Tests
 # [cite: 53] "Run Tests button"
-@app.post("/run-tests", response_model=List[TestResult])
-async def run_tests(request: RunTestsRequest):
-    # TODO: Implement Test Runner Logic
-    return []
+@app.post("/run-tests")
+def run_tests(request: RunTestsRequest) -> Dict[str, Any]:
+    """Run provided tests and return a simple summary.
+
+    Uses the placeholder runner in `app.services.test_runner` which returns
+    a dict with totals. The frontend expects a summary object.
+    """
+    summary = runner.run_tests(request.testCases, {"baseUrl": request.baseUrl})
+    return summary
