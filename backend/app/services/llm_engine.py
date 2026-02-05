@@ -7,7 +7,7 @@ from app.schemas import EndpointMetadata, TestCase
 # CONFIGURATION PLACEHOLDERS
 # ==========================================
 # TODO: Replace these values when you are ready to connect to a real LLM.
-LLM_API_KEY = "AIzaSyC-eWV0-XEBrOJyV0muDDFrmxhRH30yqT8"
+LLM_API_KEY = "my_API_key"
 LLM_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 LLM_MODEL = "gemini-2.5-flash"
 
