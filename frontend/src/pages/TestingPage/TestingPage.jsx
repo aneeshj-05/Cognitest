@@ -98,6 +98,7 @@ const TestingPage = ({ onBack }) => {
         description: tc.description || tc.name,
         category: tc.category,
         priority: tc.priority,
+        payloadData: tc.payloadData || {},
         selected: true
       }));
       

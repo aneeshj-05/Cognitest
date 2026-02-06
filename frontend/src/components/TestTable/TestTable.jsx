@@ -1,9 +1,21 @@
-import { Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Trash2, Eye } from 'lucide-react';
+import PayloadModal from '../PayloadModal/PayloadModal';
 
 /**
  * Test Cases Table Component
  */
 const TestTable = ({ testCases, onToggleSelection, onDeleteTestCase }) => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedPayload, setSelectedPayload] = useState({});
+  const [selectedTestCase, setSelectedTestCase] = useState('');
+
+  const handleViewPayload = (testCase) => {
+    setSelectedPayload(testCase.payloadData || {});
+    setSelectedTestCase(testCase.description || testCase.method);
+    setModalOpen(true);
+  };
+
   if (testCases.length === 0) return null;
 
   return (
@@ -12,6 +24,7 @@ const TestTable = ({ testCases, onToggleSelection, onDeleteTestCase }) => {
         className="overflow-y-auto"
         style={{ 
           maxHeight: '400px',
+          scrollbarGutter: 'stable'
         }}
       >
         <table className="w-full text-left border-collapse">
@@ -21,6 +34,7 @@ const TestTable = ({ testCases, onToggleSelection, onDeleteTestCase }) => {
               <th className="px-4 py-3 text-sm font-medium">Method</th>
               <th className="px-4 py-3 text-sm font-medium">Endpoint</th>
               <th className="px-4 py-3 text-sm font-medium">Expected</th>
+              <th className="px-4 py-3 text-sm font-medium">Payload</th>
               <th className="px-4 py-3 text-sm font-medium">Description</th>
               <th className="px-4 py-3 text-sm font-medium w-20 text-center">×</th>
             </tr>
@@ -39,6 +53,19 @@ const TestTable = ({ testCases, onToggleSelection, onDeleteTestCase }) => {
                 <td className="px-4 py-4 font-mono text-sm text-gray-400 uppercase">{tc.method}</td>
                 <td className="px-4 py-4 text-sm text-[#4d97e8] font-medium">{tc.endpoint}</td>
                 <td className="px-4 py-4 text-sm text-gray-400">{tc.expected}</td>
+                <td className="px-4 py-4 text-sm text-gray-600">
+                  {tc.payloadData && Object.keys(tc.payloadData).length > 0 ? (
+                    <button
+                      onClick={() => handleViewPayload(tc)}
+                      className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg transition-colors font-medium text-sm border border-blue-200"
+                    >
+                      <Eye className="w-4 h-4" />
+                      See
+                    </button>
+                  ) : (
+                    <span className="text-gray-400 italic">No payload</span>
+                  )}
+                </td>
                 <td className="px-4 py-4 text-sm text-[#4d97e8] italic">{tc.description}</td>
                 <td className="px-4 py-4 text-center">
                   <button
@@ -53,6 +80,12 @@ const TestTable = ({ testCases, onToggleSelection, onDeleteTestCase }) => {
           </tbody>
         </table>
       </div>
+      <PayloadModal 
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        payload={selectedPayload}
+        testCaseName={selectedTestCase}
+      />
     </div>
   );
 };

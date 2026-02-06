@@ -60,6 +60,7 @@ def build_postman_collection(parsed, testcases):
         
         # Build request body for POST/PUT/PATCH methods
         request_body = None
+        body_data = {}
         if method in ["POST", "PUT", "PATCH"]:
             # Add sample body based on endpoint type
             body_data = tc.get("body", {})
@@ -81,6 +82,11 @@ def build_postman_collection(parsed, testcases):
                     "mode": "raw",
                     "raw": json.dumps(body_data, indent=2)
                 }
+                # Store full payload in testcase for frontend display
+                tc['payloadData'] = body_data if body_data else {}
+        else:
+            # For GET, DELETE, etc., no payload
+            tc['payloadData'] = {}
         
         # Build test script
         test_script = [
