@@ -171,3 +171,7 @@ The backend already has CORS enabled. If you still face issues, ensure all servi
 ## License
 
 MIT
+
+## run bat file
+
+.\start-all.bat

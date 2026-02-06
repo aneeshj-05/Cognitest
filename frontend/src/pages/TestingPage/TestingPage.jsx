@@ -4,7 +4,7 @@ import FileUpload from '../../components/FileUpload/FileUpload';
 import TestTable from '../../components/TestTable/TestTable';
 import TestResults from '../../components/TestResults/TestResults';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
-import { generateTestCases, generateTestCasesFromSpec, executeBatch } from '../../services/api';
+import { generateTestCases, generateTestCasesFromSpec, getCollection, updateTestCases, executeBatch } from '../../services/api';
 
 const BATCH_SIZE = 10;
 
@@ -137,6 +137,37 @@ const TestingPage = ({ onBack }) => {
     };
 
     try {
+      // Step 1: Get the current collection from the backend
+      const { collection } = await getCollection(runId);
+
+      // Step 2: Map test case IDs (which are indices + 1) to collection indices
+      // testCases have id = index + 1 from the transformation, so we filter collection.item
+      // based on which indices correspond to non-deleted test cases
+      const deletedIndices = new Set();
+      const maxId = Math.max(...testCases.map(tc => tc.id), 0);
+      
+      // Find indices that were deleted (exist in range but not in current testCases)
+      for (let i = 1; i <= maxId; i++) {
+        if (!testCases.find(tc => tc.id === i)) {
+          deletedIndices.add(i - 1); // Convert to 0-based index
+        }
+      }
+
+      // Filter the collection items to exclude deleted indices
+      const filteredItems = collection.item.filter((item, index) => {
+        return !deletedIndices.has(index);
+      });
+
+      // Create filtered collection with only non-deleted items
+      const filteredCollection = {
+        ...collection,
+        item: filteredItems
+      };
+
+      // Step 3: Update the collection on the backend with filtered items
+      await updateTestCases(runId, filteredCollection);
+
+      // Step 4: Run tests against the updated collection
       const totalTests = testCases.length;
       const totalBatches = Math.ceil(totalTests / BATCH_SIZE);
       
@@ -215,7 +246,7 @@ const TestingPage = ({ onBack }) => {
       <div className="flex gap-4">
         <input
           type="text"
-          placeholder="Enter Swagger/OpenAPI URL (e.g., https://petstore.swagger.io/v2/swagger.json)"
+          placeholder="Enter URL"
           className={`flex-1 px-4 py-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500 transition-all shadow-sm ${uploadedSpec ? 'bg-gray-100' : ''}`}
           value={swaggerUrl}
           onChange={(e) => setSwaggerUrl(e.target.value)}
@@ -228,7 +259,7 @@ const TestingPage = ({ onBack }) => {
             isLoading || (!uploadedSpec && !swaggerUrl.trim()) ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >
-          {isLoading ? 'Generating...' : uploadedSpec ? 'Generate from File' : 'Generate Test Cases'}
+          {isLoading ? 'Generating...' : 'Generate Test Cases'}
         </button>
       </div>
 
@@ -245,7 +276,7 @@ const TestingPage = ({ onBack }) => {
             </button>
           </p>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               API Base URL (for running tests):
             </label>
             <input

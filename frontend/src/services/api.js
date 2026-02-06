@@ -101,6 +101,25 @@ export async function executeTests(runId) {
 }
 
 /**
+ * Get the collection for a specific run
+ */
+export async function getCollection(runId) {
+  const response = await fetch(`${API_BASE_URL}/api/runs/${runId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Failed to get collection' }));
+    throw new Error(error.error || error.message || 'Failed to get collection');
+  }
+
+  return response.json();
+}
+
+/**
  * Get the total number of tests in a collection
  */
 export async function getTestCount(runId) {
@@ -159,6 +178,7 @@ export async function executeBatch(runId, batchIndex, batchSize = 10) {
 export default {
   generateTestCases,
   generateTestCasesFromSpec,
+  getCollection,
   updateTestCases,
   executeTests,
   getTestCount,
