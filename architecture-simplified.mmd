@@ -1,0 +1,67 @@
+graph TB
+    subgraph "User Interface"
+        User([👤 User])
+        UI[React Frontend<br/>Port: 5173]
+    end
+    
+    subgraph "Backend Services"
+        Backend[Node.js Backend<br/>Port: 5000<br/><br/>• Routes & Controllers<br/>• File Storage Manager<br/>• Batch Orchestrator]
+        Python[Python FastAPI<br/>Port: 8000<br/><br/>• Swagger Parser<br/>• AI Test Generator<br/>• Report Analyzer]
+    end
+    
+    subgraph "External Services"
+        Gemini[🤖 Google Gemini AI<br/>gemini-2.5-flash<br/><br/>Generates intelligent<br/>test cases]
+        Newman[Newman Test Runner<br/><br/>Executes API tests<br/>in batches of 10]
+        TargetAPI[🎯 Target API<br/><br/>API being tested]
+    end
+    
+    subgraph "Storage Layer"
+        Storage[(📁 File Storage)]
+        Collections[Collections/<br/>Postman collections<br/>with test cases]
+        Reports[Reports/<br/>Newman execution<br/>reports JSON+HTML]
+        Summaries[Summaries/<br/>Analyzed test<br/>results]
+    end
+    
+    %% User Interactions
+    User -->|1. Upload Swagger<br/>URL or File| UI
+    UI -->|10. Display<br/>test cases| User
+    UI -->|15. Show progress<br/>& results| User
+    
+    %% Generation Flow
+    UI -->|2. Generate request| Backend
+    Backend -->|3. Parse Swagger| Python
+    Python -->|4. Generate tests| Gemini
+    Gemini -->|5. Test cases| Python
+    Python -->|6. Collection| Backend
+    Backend -->|7. Store| Collections
+    Collections -.->|Part of| Storage
+    Backend -->|8. Return tests| UI
+    
+    %% Execution Flow
+    UI -->|9. Execute tests| Backend
+    Backend -->|11. Load| Collections
+    Backend -->|12. Run batch| Newman
+    Newman -->|13. HTTP requests| TargetAPI
+    TargetAPI -->|14. Responses| Newman
+    Newman -->|15. Reports| Reports
+    Reports -.->|Part of| Storage
+    Backend -->|16. Analyze| Python
+    Python -->|17. Summary| Backend
+    Backend -->|18. Store| Summaries
+    Summaries -.->|Part of| Storage
+    Backend -->|19. Results| UI
+    
+    %% Styling
+    classDef userStyle fill:#e3f2fd,stroke:#1565c0,stroke-width:3px
+    classDef backendStyle fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    classDef pythonStyle fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef externalStyle fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef storageStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    classDef aiStyle fill:#fce4ec,stroke:#c2185b,stroke-width:3px
+    
+    class User,UI userStyle
+    class Backend backendStyle
+    class Python pythonStyle
+    class Newman,TargetAPI externalStyle
+    class Storage,Collections,Reports,Summaries storageStyle
+    class Gemini aiStyle

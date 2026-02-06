@@ -1,0 +1,129 @@
+flowchart TD
+    %% User Interface Layer
+    User([User/Tester])
+    Frontend[Frontend - React/Vite<br/>Port: 5173]
+    
+    %% Input Methods
+    SwaggerURL[Swagger URL<br/>or<br/>JSON File Upload]
+    
+    %% Backend Layer
+    Backend[Backend - Node.js/Express<br/>Port: 5000]
+    
+    %% Python Service Layer
+    FastAPI[Python Service - FastAPI<br/>Port: 8000]
+    Gemini[Google Gemini AI<br/>gemini-2.5-flash]
+    
+    %% Processing Components
+    SwaggerParser[Swagger Parser<br/>Parse endpoints & base URL]
+    TestGenerator[Test Generator<br/>Generate comprehensive tests]
+    PostmanBuilder[Postman Builder<br/>Build collection with auth]
+    
+    %% Storage Layer
+    Storage[(File Storage)]
+    Collections[Collections<br/>UUID.json]
+    Reports[Reports<br/>JSON + HTML]
+    Summaries[Summaries<br/>Test results]
+    
+    %% Test Execution Components
+    TestTable[Test Table UI<br/>Edit/Delete tests]
+    Newman[Newman Test Runner<br/>Batch execution]
+    ReportAnalyzer[Report Analyzer<br/>Parse Newman results]
+    
+    %% Results Display
+    Results[Test Results UI<br/>Success/Failed endpoints]
+    
+    %% ============================================
+    %% FLOW 1: GENERATE TEST CASES
+    %% ============================================
+    User -->|1. Provide Swagger spec| SwaggerURL
+    SwaggerURL -->|URL or File| Frontend
+    
+    Frontend -->|2. POST /api/runs/generate<br/>or /generate-from-spec| Backend
+    
+    %% Backend to FastAPI - Parse
+    Backend -->|3a. POST /parse-swagger<br/>with URL| FastAPI
+    Backend -->|3b. POST /parse-swagger-spec<br/>with JSON| FastAPI
+    
+    FastAPI --> SwaggerParser
+    SwaggerParser -->|Parsed endpoints<br/>+ base URL| FastAPI
+    
+    %% Backend to FastAPI - Generate
+    Backend -->|4. POST /generate-tests<br/>parsed data| FastAPI
+    
+    FastAPI --> TestGenerator
+    TestGenerator -->|5. Send API spec<br/>+ prompt| Gemini
+    Gemini -->|6. AI-generated<br/>test cases| TestGenerator
+    
+    TestGenerator --> PostmanBuilder
+    PostmanBuilder -->|7. Postman Collection<br/>with auth handling| FastAPI
+    
+    FastAPI -->|8. Collection + Testcases| Backend
+    
+    %% Storage
+    Backend -->|9. Store collection<br/>with runId UUID| Storage
+    Storage --> Collections
+    
+    Backend -->|10. Return runId<br/>+ testcases| Frontend
+    Frontend -->|11. Display in| TestTable
+    
+    %% ============================================
+    %% FLOW 2: EXECUTE TESTS
+    %% ============================================
+    TestTable -->|12. User edits/deletes<br/>Click Run Tests| Frontend
+    
+    Frontend -->|13. GET /api/runs/:runId/collection| Backend
+    Backend -->|14. Load collection| Collections
+    Collections --> Backend
+    
+    Frontend -->|15. PUT /api/runs/:runId/testcases<br/>updated collection| Backend
+    Backend -->|16. Update stored<br/>collection| Collections
+    
+    Frontend -->|17. POST /api/runs/:runId/execute-batch<br/>batchIndex, batchSize=10| Backend
+    
+    Backend -->|18. Load collection| Collections
+    Collections --> Backend
+    
+    Backend -->|19. Run batch<br/>of 10 tests| Newman
+    Newman -->|20. Execute HTTP<br/>requests to API| APIUnderTest[Target API<br/>Being Tested]
+    
+    Newman -->|21. Generate reports<br/>JSON + HTML| Storage
+    Storage --> Reports
+    
+    Backend -->|22. Read report| Reports
+    Reports --> Backend
+    
+    Backend -->|23. POST /analyze-report<br/>Newman report| FastAPI
+    FastAPI --> ReportAnalyzer
+    ReportAnalyzer -->|24. Analyzed summary<br/>passed/failed stats| FastAPI
+    
+    FastAPI -->|25. Return summary| Backend
+    Backend -->|26. Store summary| Storage
+    Storage --> Summaries
+    
+    Backend -->|27. Return batch results<br/>+ progress| Frontend
+    
+    Frontend -->|28. Repeat batches<br/>until complete| Backend
+    
+    Frontend -->|29. Display final<br/>aggregated results| Results
+    Results -->|30. View report| User
+    
+    %% ============================================
+    %% STYLING
+    %% ============================================
+    classDef userClass fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef frontendClass fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef backendClass fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef pythonClass fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef aiClass fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef storageClass fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    classDef executionClass fill:#e0f2f1,stroke:#004d40,stroke-width:2px
+    classDef apiClass fill:#ffebee,stroke:#b71c1c,stroke-width:2px
+    
+    class User,Results userClass
+    class Frontend,SwaggerURL,TestTable frontendClass
+    class Backend backendClass
+    class FastAPI,SwaggerParser,TestGenerator,PostmanBuilder,ReportAnalyzer pythonClass
+    class Gemini aiClass
+    class Storage,Collections,Reports,Summaries storageClass
+    class Newman executionClass
+    class APIUnderTest apiClass

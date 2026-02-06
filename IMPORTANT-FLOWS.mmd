@@ -1,0 +1,35 @@
+flowchart TD
+    Start([User Provides Swagger Spec]) -->|URL or File Upload| Frontend[Frontend]
+    
+    Frontend -->|Request Test Generation| Backend[Backend]
+    Backend -->|Parse Swagger| Python[Python Service]
+    Python -->|Generate Test Cases| AI[Google Gemini AI]
+    AI -->|Intelligent Tests| Python
+    Python -->|Build Collection| Backend
+    Backend -->|Store & Return| Frontend
+    
+    Frontend -->|Display Test Cases| User{User Reviews<br/>Tests}
+    
+    User -->|Edits/Deletes<br/>then Clicks Run| Frontend
+    Frontend -->|Execute Tests<br/>Batch by Batch| Backend
+    
+    Backend -->|Run 10 Tests| Newman[Newman]
+    Newman -->|HTTP Requests| API[Target API]
+    API -->|Responses| Newman
+    Newman -->|Generate Report| Backend
+    
+    Backend -->|Analyze Results| Python
+    Python -->|Summary| Backend
+    Backend -->|Return Results| Frontend
+    
+    Frontend -->|Show Passed/Failed<br/>Tests| End([Results & Reports])
+    
+    style Start fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style Frontend fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style Backend fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    style Python fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style AI fill:#fce4ec,stroke:#c2185b,stroke-width:3px
+    style Newman fill:#e0f2f1,stroke:#004d40,stroke-width:2px
+    style API fill:#ffebee,stroke:#b71c1c,stroke-width:2px
+    style End fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style User fill:#fff9c4,stroke:#f57f17,stroke-width:2px
