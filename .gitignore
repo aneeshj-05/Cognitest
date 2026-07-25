@@ -14,12 +14,17 @@ pnpm-debug.log*
 # =====================================
 # Python / FastAPI
 # =====================================
-Backend/__pycache__/
-Backend/.venv/
-Backend/venv/
-Backend/env/
-Backend/.env
-Backend/.env.*
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.coverage
+backend/htmlcov/
+
+# Virtual Environments
+backend/venv/
+backend/.venv/
+backend/env/
 
 # Python compiled files
 *.py[cod]
