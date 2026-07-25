@@ -1,6 +1,8 @@
-# Cognitest
+# CogniTest
 
-Cognitest is an internal platform that provides a FastAPI-based backend and a modern TypeScript/Vite frontend for managing workspaces, projects, and members. It includes JWT authentication, a PostgreSQL database (Prisma schema), and a proxy/gateway for forwarding requests to target services. This repository holds both the Backend (FastAPI + Prisma Python) and the Frontend (TypeScript + Vite/React) components.
+CogniTest is a full-stack API testing and contract validation platform designed to simplify API quality assurance. By leveraging OpenAPI/Swagger specifications, it automatically generates and executes test suites while providing detailed AI-powered insights into failures. The platform supports security validation, multi-tenant project management, and comprehensive reporting, enabling teams to test APIs faster and more reliably.
+
+Cognitest is also an internal platform that provides a FastAPI-based backend and a modern TypeScript/Vite frontend for managing workspaces, projects, and members. It includes JWT authentication, a PostgreSQL database (Prisma schema), and a proxy/gateway for forwarding requests to target services. This repository holds both the Backend (FastAPI + Prisma Python) and the Frontend (TypeScript + Vite/React) components.
 
 ## Quick links
 - Backend: `Backend/` (FastAPI)
