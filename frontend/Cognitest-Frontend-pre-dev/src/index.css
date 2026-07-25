@@ -1,0 +1,233 @@
+@config "../tailwind.config.js";
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+
+    --cta-start: var(--primary);
+    --cta-end: var(--primary);
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 160 84% 39%;
+
+    --radius: 0.5rem;
+
+    /* Required by ShadCN variants */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Sidebar tokens — dark sidebar with green accent */
+    --sidebar-background: 220 32% 12%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 32% 16%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 220 32% 18%;
+    --sidebar-ring: 160 84% 39%;
+
+    --chart-1: 160 84% 39%;
+    --chart-2: 215 16% 47%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    --background: 222 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 213 32% 17%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 213 32% 17%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+
+    --cta-start: var(--primary);
+    --cta-end: var(--primary);
+
+    --secondary: 213 32% 22%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 213 32% 22%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 213 32% 22%;
+    --input: 213 32% 22%;
+    --ring: 160 84% 39%;
+
+    --sidebar-background: 220 32% 12%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 32% 16%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 220 32% 18%;
+    --sidebar-ring: 160 84% 39%;
+
+    --chart-1: 160 84% 39%;
+    --chart-2: 215 20% 65%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Subtle scrollbars (keep scroll UX, avoid loud UI) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  [data-slot="sidebar-menu-button"][data-active="true"] {
+    font-weight: 500;
+  }
+}
+
+@layer utilities {
+  .landing-grid {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.35) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.35) 1px, transparent 1px);
+    background-size: 64px 64px;
+    background-position: top center;
+  }
+
+  .landing-grid-fade {
+    -webkit-mask-image: radial-gradient(ellipse at top, black 45%, transparent 75%);
+    mask-image: radial-gradient(ellipse at top, black 45%, transparent 75%);
+  }
+
+  .landing-hero-glow {
+    background: radial-gradient(ellipse at top, hsl(var(--foreground) / 0.12), transparent 60%);
+  }
+
+  .landing-card-glow {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .landing-card-glow::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+    background: radial-gradient(
+      600px circle at var(--x, 50%) var(--y, 50%),
+      hsl(var(--foreground) / 0.10),
+      transparent 40%
+    );
+  }
+
+  .landing-card-glow:hover::before {
+    opacity: 1;
+  }
+
+  .landing-border {
+    border-color: hsl(var(--border));
+  }
+
+  .landing-gradient-text {
+    background-image: linear-gradient(to right, hsl(var(--foreground)), hsl(var(--muted-foreground)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .landing-gradient-button {
+    background-color: hsl(var(--foreground));
+    background-image: linear-gradient(to right, hsl(var(--foreground)), hsl(var(--muted-foreground)));
+    color: hsl(var(--background));
+  }
+
+  .landing-gradient-button:hover {
+    filter: brightness(1.02);
+  }
+
+  .landing-link {
+    position: relative;
+  }
+
+  .landing-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    height: 1px;
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 200ms ease-out;
+    background: hsl(var(--foreground));
+    opacity: 0.6;
+  }
+
+  .landing-link:hover::after {
+    transform: scaleX(1);
+  }
+}

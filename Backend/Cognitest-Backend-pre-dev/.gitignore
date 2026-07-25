@@ -1,0 +1,29 @@
+node_modules
+# Keep environment variables out of version control
+.env
+.env.production
+.env.staging
+.env.local
+
+
+
+/src/generated/prisma
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+logs/
+storage/
+
+# Local cache artifacts
+.cache/
+PROMPT_INJECTION_MITIGATION.md
+ASYNC_GENERATION.md
+ANTHROPIC_SDK_MIGRATION.md

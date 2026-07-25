@@ -1,0 +1,59 @@
+services:
+  api:
+    build: .
+    container_name: cognitest-api
+    restart: always
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=production
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - cognitest-shared-network
+
+  # ── Background worker (ARQ) ───────────────────────────────────────────────
+  # Scale with: docker compose up --scale worker=4
+  worker:
+    build: .
+    restart: always
+    command: ["uv", "run", "arq", "src.worker.main.WorkerSettings"]
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=production
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - cognitest-shared-network
+
+  # ── Redis broker ──────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: cognitest-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - cognitest-shared-network
+
+networks:
+  cognitest-shared-network:
+    # Managed by Docker Compose — created automatically on first `docker compose up`.
+    # No need for a prior `docker network create` step.
+
+volumes:
+  redis_data:

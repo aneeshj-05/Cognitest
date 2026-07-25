@@ -1,0 +1,586 @@
+generator client {
+  provider = "prisma-client-py"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model ApiSpec {
+  id                  String               @id @default(uuid())
+  projectId           String
+  file_type           String
+  version             String
+  file_url            String
+  uploadedBy          String?
+  parsed_spec         Json?
+  createdAt           DateTime             @default(now())
+  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user                User?                @relation(fields: [uploadedBy], references: [id])
+  contractValidations ContractValidation[]
+  endpoints           Endpoint[]
+  testSuites          TestSuite[]
+}
+
+model ContractValidation {
+  id              String                   @id @default(uuid())
+  runId           String
+  endpointId      String?
+  specId          String?
+  status          ContractValidationStatus
+  schemaPath      String?
+  expected_schema Json?
+  actual_schema   Json?
+  diffs           Json?
+  specVersion     String?
+  previousVersion String?
+  isBreaking      Boolean                  @default(false)
+  validatedAt     DateTime                 @default(now())
+  createdBy       String?
+  endpoint        Endpoint?                @relation(fields: [endpointId], references: [id], onDelete: SetNull)
+  run             TestRun                  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  spec            ApiSpec?                 @relation(fields: [specId], references: [id], onDelete: SetNull)
+
+  @@index([runId])
+}
+
+model Endpoint {
+  id                  String               @id @default(uuid())
+  projectId           String
+  specId              String
+  method              String
+  path                String
+  summary             String?
+  description         String?
+  requiresAuth        Boolean              @default(true)
+  requestSchema       Json?
+  responseSchema      Json?
+  createdAt           DateTime             @default(now())
+  contractValidations ContractValidation[]
+  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  spec                ApiSpec              @relation(fields: [specId], references: [id], onDelete: Cascade)
+  fuzzResults         FuzzResult[]
+  securityFindings    SecurityFinding[]
+  test_cases          TestCase[]
+}
+
+model FuzzResult {
+  id              String          @id @default(uuid())
+  runId           String
+  testCaseId      String?
+  endpointId      String?
+  fuzzType        TestSubCategory
+  inputPayload    String?
+  inputEncoding   String?
+  responseStatus  Int?
+  responseBody    Json?
+  crashed         Boolean         @default(false)
+  anomalyDetected Boolean         @default(false)
+  anomalyDetails  String?
+  executedAt      DateTime        @default(now())
+  endpoint        Endpoint?       @relation(fields: [endpointId], references: [id], onDelete: SetNull)
+  run             TestRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  testCase        TestCase?       @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+
+  @@index([runId, fuzzType])
+  @@index([endpointId])
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  name        String
+  resource    String
+  action      PermissionAction
+  description String?
+  roles       RolePermission[]
+}
+
+model Plan {
+  id                  String         @id @default(uuid())
+  name                String
+  description         String?
+  maxProjects         Int
+  maxTestRunsPerMonth Int
+  maxUsers            Int
+  aiGenerationEnabled Boolean        @default(false)
+  regressionEnabled   Boolean        @default(false)
+  // Token budget per calendar month. -1 = unlimited (ENTERPRISE).
+  // NULL is treated as the FREE default (500_000 tokens/month).
+  monthlyTokenLimit   Int?
+  createdAt           DateTime       @default(now())
+  subscriptions       Subscription[]
+}
+
+model Project {
+  id          String          @id @default(uuid())
+  tenantId    String?
+  workspaceId String
+  name        String
+  description String?
+  baseUrl     String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  api_specs       ApiSpec[]
+  endpoints       Endpoint[]
+  tenant          Tenant?         @relation(fields: [tenantId], references: [id])
+  workspace       Workspace       @relation(fields: [workspaceId], references: [id])
+  members         ProjectMember[]
+  test_runs       TestRun[]
+  test_suites     TestSuite[]
+  generation_jobs GenerationJob[]
+  invitations     Invitation[]
+}
+
+model ProjectMember {
+  id        String  @id @default(uuid())
+  projectId String
+  userId    String
+  roleId    String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role      Role    @relation(fields: [roleId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+}
+
+model RegressionSnapshot {
+  id            String   @id @default(uuid())
+  runId         String
+  testCaseId    String
+  response_hash String
+  response_body Json?
+  createdAt     DateTime @default(now())
+  run           TestRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  test          TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+}
+
+model Role {
+  id               String            @id @default(uuid())
+  tenantId         String?
+  workspaceId      String?
+  name             String
+  description      String?
+  createdAt        DateTime          @default(now())
+  projectMembers   ProjectMember[]
+  tenant           Tenant?           @relation(fields: [tenantId], references: [id])
+  workspace        Workspace?        @relation(fields: [workspaceId], references: [id])
+  permissions      RolePermission[]
+  workspaceMembers WorkspaceMember[]
+  invitations      Invitation[]
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
+
+  @@unique([roleId, permissionId])
+}
+
+model SecurityFinding {
+  id              String           @id @default(uuid())
+  runId           String
+  testCaseId      String?
+  endpointId      String?
+  vulnerability   TestSubCategory
+  severity        SecuritySeverity
+  title           String
+  description     String?
+  evidence        Json?
+  remediation     String?
+  cweid           String?
+  isVerified      Boolean          @default(false)
+  isFalsePositive Boolean          @default(false)
+  detectedAt      DateTime         @default(now())
+  endpoint        Endpoint?        @relation(fields: [endpointId], references: [id], onDelete: SetNull)
+  run             TestRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
+  testCase        TestCase?        @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+
+  @@index([runId, severity])
+  @@index([endpointId])
+}
+
+model Subscription {
+  id         String   @id @default(uuid())
+  tenantId   String   @unique
+  planId     String
+  status     String
+  startDate  DateTime
+  expiryDate DateTime
+  autoRenew  Boolean
+  createdAt  DateTime @default(now())
+  plan       Plan     @relation(fields: [planId], references: [id])
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+// Tracks cumulative AI token usage per tenant per calendar month.
+// One row per (tenantId, periodStart). Upserted atomically after every
+// Claude API call so budget enforcement reads fresh DB data.
+model TenantTokenUsage {
+  id           String   @id @default(uuid())
+  tenantId     String
+  periodStart  DateTime  // first moment of the billing month (UTC, day=1 00:00:00)
+  periodEnd    DateTime  // last moment of that month (exclusive)
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  totalTokens  Int      @default(0)
+  costUsd      Float    @default(0)
+  updatedAt    DateTime @updatedAt
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, periodStart])
+  @@index([tenantId, periodStart])
+}
+
+model Tenant {
+  id            String             @id @default(uuid())
+  name          String             @unique
+  status        String
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  projects      Project[]
+  roles         Role[]
+  subscriptions Subscription?
+  users         User[]
+  workspaces    Workspace?
+  tokenUsage    TenantTokenUsage[]
+}
+
+model TestCase {
+  id                String               @id @default(uuid())
+  projectId         String
+  endpointId        String?
+  name              String
+  description       String?
+  category          TestCategory
+  subCategory       TestSubCategory
+  tags              String[]             @default([])
+  endpoint_path     String               @default("/")
+  method            String               @default("GET")
+  request_headers   Json?
+  request_query     Json?
+  request_body      Json?
+  path_params       Json?
+  expected_status   Int                  @default(200)
+  expected_response Json?
+  assertions        Json?
+  metadata          Json?
+  custom_headers    Json?
+  dependsOn         String?
+  maxRetries        Int                  @default(0)
+  timeoutMs         Int                  @default(30000)
+  priority          Int                  @default(1)
+  execution_order   Int?
+  isActive          Boolean              @default(true)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  suiteId           String
+  ai_explanation    String?
+  test_type         String?
+  ai_tokens_used    Int                  @default(0)
+  ai_cost_usd       Float                @default(0)
+  fuzzResults       FuzzResult[]
+  snapshots         RegressionSnapshot[]
+  securityFindings  SecurityFinding[]
+  endpoint          Endpoint?            @relation(fields: [endpointId], references: [id], onDelete: SetNull)
+  suite             TestSuite            @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  results           TestResult[]
+  suites            TestSuiteTestCase[]
+}
+
+model TestResult {
+  id                String           @id @default(uuid())
+  runId             String
+  testCaseId        String
+  status            TestResultStatus
+  category          TestCategory?
+  subCategory       TestSubCategory?
+  expected_status   Int
+  actual_status     Int
+  response_time_ms  Int?
+  response_body     Json?
+  error_message     String?
+  assertion_details Json?
+  request_sent      Json?
+  response_headers  Json?
+  retryCount        Int              @default(0)
+  executedAt        DateTime         @default(now())
+  run               TestRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
+  test              TestCase         @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+}
+
+model TestRun {
+  id                  String               @id @default(uuid())
+  projectId           String
+  suiteId             String?
+  environment         String
+  status              TestRunStatus
+  categories          TestCategory[]       @default([])
+  environment_config  Json?
+  total_tests         Int                  @default(0)
+  passed              Int                  @default(0)
+  failed              Int                  @default(0)
+  skipped             Int                  @default(0)
+  durationMs          Int?
+  triggeredBy         String
+  errorLog            String?
+  metadata            Json?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime             @default(now())
+  contractValidations ContractValidation[]
+  fuzzResults         FuzzResult[]
+  snapshots           RegressionSnapshot[]
+  securityFindings    SecurityFinding[]
+  results             TestResult[]
+  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  suite               TestSuite?           @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  user                User                 @relation(fields: [triggeredBy], references: [id])
+}
+
+model TestSuite {
+  id                String              @id @default(uuid())
+  projectId         String
+  name              String
+  description       String?
+  category          TestCategory
+  priority          SuitePriority       @default(MEDIUM)
+  isActive          Boolean             @default(true)
+  createdBy         String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  ai_tokens_used    Int                 @default(0)
+  ai_cost_usd       Float               @default(0)
+  generation_method String?
+  test_type         String?
+  specId            String?
+  specVersion       String?
+  cases             TestCase[]
+  testRuns          TestRun[]
+  user              User?               @relation("SuiteCreatedBy", fields: [createdBy], references: [id])
+  project           Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  spec              ApiSpec?            @relation(fields: [specId], references: [id])
+  testCases         TestSuiteTestCase[]
+
+  @@index([projectId, category])
+  @@index([specId])
+}
+
+model TestSuiteTestCase {
+  id         String    @id @default(uuid())
+  suiteId    String
+  testCaseId String
+  orderIndex Int       @default(0)
+  addedAt    DateTime  @default(now())
+  suite      TestSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  testCase   TestCase  @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  @@unique([suiteId, testCaseId])
+  @@index([suiteId])
+}
+
+model User {
+  id               String            @id @default(uuid())
+  tenantId         String?
+  email            String
+  name             String?
+  passwordHash     String
+  company          String?
+  contactNumber    String?
+  systemRole       String            @default("USER")
+  isVerified       Boolean           @default(false)
+  otpCode          String?
+  otpExpiry        DateTime?
+  otpAttempts      Int               @default(0)
+  otpLockedUntil   DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  api_specs        ApiSpec[]
+  projectMembers   ProjectMember[]
+  test_runs        TestRun[]
+  test_suites      TestSuite[]       @relation("SuiteCreatedBy")
+  tenant           Tenant?           @relation(fields: [tenantId], references: [id])
+  workspaces       Workspace[]       @relation("CreatedBy")
+  workspaceMembers WorkspaceMember[]
+  invitationsSent  Invitation[]      @relation("InviterRelation")
+
+  @@unique([tenantId, email])
+}
+
+model Workspace {
+  id        String            @id @default(uuid())
+  tenantId  String?           @unique
+  name      String
+  createdBy String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  projects  Project[]
+  roles     Role[]
+  creator   User?             @relation("CreatedBy", fields: [createdBy], references: [id])
+  tenant    Tenant?           @relation(fields: [tenantId], references: [id])
+  members   WorkspaceMember[]
+  invitations Invitation[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(uuid())
+  workspaceId String
+  userId      String
+  roleId      String
+  joinedAt    DateTime  @default(now())
+  role        Role      @relation(fields: [roleId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([workspaceId, userId])
+}
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  subject     String
+  category    String
+  description String
+  status      String   @default("open")
+  userId      String?
+  workspaceId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+enum ContractValidationStatus {
+  CONFORMANT
+  DRIFT_DETECTED
+  BREAKING_CHANGE
+  DEPRECATED
+}
+
+enum PermissionAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  EXECUTE
+  MANAGE
+}
+
+enum SecuritySeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum SuitePriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TestCategory {
+  FUNCTIONAL
+  NEGATIVE
+  SECURITY
+  CONTRACT
+  FUZZ
+}
+
+enum TestResultStatus {
+  PASSED
+  FAILED
+  SKIPPED
+}
+
+enum TestRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model GenerationJob {
+  id         String    @id @default(uuid())
+  projectId  String
+  status     String    @default("pending")  // pending | running | completed | failed | partial
+  progress   Int       @default(0)           // endpoints completed so far
+  total      Int       @default(0)           // total endpoints to process
+  result     Json?                           // final test cases (JSON array)
+  error      String?
+  testType   String
+  useAi      Boolean   @default(false)
+  params     Json?                           // GenerateTestsRequest serialised
+  suiteId    String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+}
+
+enum TestSubCategory {
+  CRUD_VALIDATION
+  SCHEMA_VALIDATION
+  QUERY_PARAM_TEST
+  HEADER_TEST
+  COOKIE_TEST
+  PATH_PARAM_TEST
+  WORKFLOW_CHAINING
+  PAGINATION
+  FILTERING
+  SORTING
+  INVALID_PARAMS
+  MISSING_PARAMS
+  INVALID_AUTH
+  EXPIRED_TOKEN
+  UNSUPPORTED_METHOD
+  INCORRECT_DATA_TYPE
+  INVALID_ENUM
+  SQL_INJECTION
+  NOSQL_INJECTION
+  XSS_INJECTION
+  COMMAND_INJECTION
+  BOLA
+  EXCESSIVE_DATA_EXPOSURE
+  SECURITY_MISCONFIGURATION
+  REPLAY_ATTACK
+  BRUTE_FORCE
+  TOKEN_THEFT
+  TOKEN_MANIPULATION
+  TLS_SSL_ENFORCEMENT
+  OPENAPI_CONFORMANCE
+  SCHEMA_DRIFT
+  BACKWARD_COMPATIBILITY
+  RANDOM_STRING
+  UNICODE_INPUT
+  LONG_INPUT
+  XSS_FUZZ
+  PATH_TRAVERSAL
+  PAYLOAD_INJECTION
+}
+
+model Invitation {
+  id          String     @id @default(uuid())
+  email       String
+  roleId      String
+  workspaceId String?
+  projectId   String?
+  token       String     @unique
+  status      String     @default("PENDING") // PENDING, ACCEPTED, REVOKED
+  message     String?
+  inviterId   String
+  createdAt   DateTime   @default(now())
+  expiresAt   DateTime
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project     Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inviter     User       @relation("InviterRelation", fields: [inviterId], references: [id], onDelete: Cascade)
+  role        Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+}
+
+

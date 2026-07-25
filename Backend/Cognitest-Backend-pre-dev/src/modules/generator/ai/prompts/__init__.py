@@ -1,0 +1,3 @@
+"""
+AI prompt templates package.
+"""

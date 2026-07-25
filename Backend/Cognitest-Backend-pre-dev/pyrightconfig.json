@@ -1,0 +1,13 @@
+{
+    "venvPath": "/home/aneeshj/Documents/Enmaz-Cognitest/backend",
+    "venv": ".venv",
+    "pythonVersion": "3.10",
+    "extraPaths": [
+        "."
+    ],
+    "executionEnvironments": [
+        {
+            "root": "."
+        }
+    ]
+}
